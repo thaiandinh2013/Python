@@ -1,2 +1,79 @@
 # Python
-Forecast and Simulation stock price 
+This project is based on 2012 election in the US between Mr Obama and Romney 
+Based on the data on the HuffPost Pollster(link below) the project will try to anwser the following question 
+1.) Who was being polled and what was their party affiliation?
+2.) Did the poll results favor Romney or Obama?
+3.) How do undecided voters effect the poll?
+4.) Can we account for the undecided voters?
+5.) How did voter sentiment change over time?
+6.) Can we see an effect in the polls from the debates?
+
+http://elections.huffingtonpost.com/pollster
+
+
+	import pandas as pd
+	from pandas import Series,DataFrame
+	import numpy as np
+	import matplotlib.pyplot as plt
+	import seaborn as sns
+	sns.set_style('whitegrid')
+	%matplotlib inline
+	from __future__ import division
+	
+	# Grab data from the web(HTTP capabilities)
+	import requests
+	from StringIO import StringIO
+	url = "http://elections.huffingtonpost.com/pollster/2012-general-election-romney-vs-obama.csv"
+	source = requests.get(url).text
+	poll_data = StringIO(source) 
+	poll_df = pd.read_csv(poll_data)
+
+# Data summary
+poll_df.info()
+poll_df.head()
+
+#Get a quick visualization overview of the affiliation for the polls.
+sns.factorplot('Affiliation',data=poll_df)
+sns.factorplot('Affiliation',data=poll_df,hue='Population')
+
+#Determine which voters favor which candidates and which voters are undecided.
+avg = pd.DataFrame(poll_df.mean()) 
+avg.drop('Number of Observations',axis=0,inplace=True)
+std = pd.DataFrame(poll_df.std())
+std.drop('Number of Observations',axis=0,inplace=True)
+avg.plot(yerr=std,kind='bar',legend=False)
+
+# Concatenate our Average and Std DataFrames
+poll_avg = pd.concat([avg,std],axis=1)
+poll_avg.columns = ['Average','STD']
+poll_avg
+poll_df.plot(x='End Date',y=['Obama','Romney','Undecided'],marker='o',linestyle='')
+
+# plot out the difference between Obama and Romney and how it changes overtime
+from datetime import datetime
+poll_df['Difference'] = (poll_df.Obama - poll_df.Romney)/100
+poll_df.head()
+Set as_index=Flase to keep the 0,1,2,... index. Then we'll take the mean of the polls on that day.
+poll_df = poll_df.groupby(['Start Date'],as_index=False).mean()
+poll_df.head()
+fig = poll_df.plot('Start Date','Difference',figsize=(12,4),marker='o',linestyle='-',color='purple')
+row_in = 0
+xlimit = []
+
+# Cycle through dates until 2012-10 is found, then print row index
+for date in poll_df['Start Date']:
+    if date[0:7] == '2012-10':
+        xlimit.append(row_in)
+        row_in +=1
+    else:
+        row_in += 1
+        
+print min(xlimit)
+print max(xlimit)
+
+
+fig = poll_df.plot('Start Date','Difference',figsize=(12,4),marker='o',linestyle='-',color='purple',xlim=(329,356))
+plt.axvline(x=329+2, linewidth=4, color='grey')
+plt.axvline(x=329+10, linewidth=4, color='grey')
+plt.axvline(x=329+21, linewidth=4, color='grey')
+
